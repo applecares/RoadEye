@@ -1,0 +1,37 @@
+# Wildlife Roadkill Detection System - Base Configuration
+
+app:
+  name: "Wildlife Roadkill Detection System"
+  version: "1.0.0"
+  environment: "development"
+
+database:
+  url: "sqlite:///roadkill.db"
+  pool_size: 5
+  echo: false
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:8000"
+
+detection:
+  confidence_threshold: 0.5
+  dedup_distance_metres: 50
+  dedup_time_seconds: 300
+  auto_approve_threshold: 0.95
+  review_threshold: 0.75
+
+edge:
+  save_images: true
+  image_quality: 85
+  upload_batch_size: 10
+  retry_delay_seconds: 30
+  max_retries: 5
+  offline_queue_max_size: 1000
+
+logging:
+  level: "INFO"
+  format: "json"

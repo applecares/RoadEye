@@ -1,0 +1,131 @@
+# Tasmania Wildlife Roadkill Configuration
+# State-specific settings for Tasmanian wildlife detection
+
+state:
+  name: "Tasmania"
+  code: "TAS"
+  timezone: "Australia/Hobart"
+  coordinate_system: "GDA94"
+
+species:
+  registry:
+    - code: "DEVIL"
+      scientific_name: "Sarcophilus harrisii"
+      common_name: "Tasmanian Devil"
+      mewc_class_id: 0
+      threatened_status: "endangered"
+      priority: "critical"
+      colour: "#ff6b6b"
+
+    - code: "FCAT"
+      scientific_name: "Felis catus"
+      common_name: "Feral Cat"
+      mewc_class_id: 1
+      threatened_status: "none"
+      priority: "pest"
+      colour: "#ffa94d"
+
+    - code: "PADEM"
+      scientific_name: "Thylogale billardierii"
+      common_name: "Tasmanian Pademelon"
+      mewc_class_id: 2
+      threatened_status: "none"
+      priority: "normal"
+      colour: "#845ef7"
+
+    - code: "WALBY"
+      scientific_name: "Notamacropus rufogriseus"
+      common_name: "Bennett's Wallaby"
+      mewc_class_id: 3
+      threatened_status: "none"
+      priority: "normal"
+      colour: "#5c7cfa"
+
+    - code: "WOMBAT"
+      scientific_name: "Vombatus ursinus"
+      common_name: "Bare-nosed Wombat"
+      mewc_class_id: 4
+      threatened_status: "none"
+      priority: "normal"
+      colour: "#845ef7"
+
+    - code: "BPOSM"
+      scientific_name: "Trichosurus vulpecula"
+      common_name: "Brushtail Possum"
+      mewc_class_id: 5
+      threatened_status: "none"
+      priority: "normal"
+      colour: "#22b8cf"
+
+    - code: "FDEER"
+      scientific_name: "Dama dama"
+      common_name: "Fallow Deer"
+      mewc_class_id: 6
+      threatened_status: "none"
+      priority: "pest"
+      colour: "#ffa94d"
+
+    - code: "BANDI"
+      scientific_name: "Isoodon obesulus"
+      common_name: "Southern Brown Bandicoot"
+      mewc_class_id: 7
+      threatened_status: "none"
+      priority: "normal"
+      colour: "#74c0fc"
+
+    - code: "CURRA"
+      scientific_name: "Strepera sp."
+      common_name: "Currawong"
+      mewc_class_id: 8
+      threatened_status: "none"
+      priority: "normal"
+      colour: "#51cf66"
+
+    - code: "BRONZ"
+      scientific_name: "Phaps sp."
+      common_name: "Bronzewing"
+      mewc_class_id: 9
+      threatened_status: "none"
+      priority: "normal"
+      colour: "#51cf66"
+
+integrations:
+  nva:
+    enabled: true
+    api_url: "https://www.naturalvaluesatlas.tas.gov.au/api"
+    institution_code: "TAS_DSG"
+    collection_code: "ROADKILL_AI"
+
+  list:
+    enabled: true
+    base_url: "https://services.thelist.tas.gov.au/arcgis/rest/services"
+    feature_service: "Public/OpenDataWFS/MapServer"
+
+hotspots:
+  # Known Tasmanian roadkill hotspots
+  known_locations:
+    - name: "Arthur River Road"
+      coordinates: [-41.0500, 144.6500]
+      species_focus: ["DEVIL"]
+
+    - name: "Murchison Highway"
+      coordinates: [-41.8000, 145.5000]
+      species_focus: ["WALBY", "PADEM"]
+
+    - name: "Huon Highway"
+      coordinates: [-43.0500, 147.0500]
+      species_focus: ["WOMBAT"]
+
+    - name: "Lyell Highway"
+      coordinates: [-42.1500, 145.8500]
+      species_focus: ["PADEM"]
+
+    - name: "Bass Highway"
+      coordinates: [-41.1500, 146.2500]
+      species_focus: ["WALBY"]
+
+reports:
+  weekly:
+    enabled: true
+    include_threatened_alerts: true
+    include_fence_recommendations: true

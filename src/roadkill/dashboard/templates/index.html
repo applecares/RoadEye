@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoadEye - Wildlife Detection Platform</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0a; color: #e0e0e0; }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+        .header h1 { font-size: 1.4rem; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .header h1 .icon { font-size: 1.6rem; }
+        .header .region { font-size: 0.9rem; color: #00d4ff; font-weight: normal; }
+
+        /* Stats */
+        .stats { display: flex; gap: 25px; }
+        .stat-box {
+            text-align: center;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            min-width: 100px;
+        }
+        .stat-box .number { font-size: 1.6rem; font-weight: bold; color: #00d4ff; }
+        .stat-box .label { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-box.alert .number { color: #ff6b6b; }
+
+        /* Layout */
+        .container { display: grid; grid-template-columns: 1fr 380px; height: calc(100vh - 70px); }
+        #map { width: 100%; height: 100%; }
+
+        /* Sidebar */
+        .sidebar {
+            background: #111;
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 1px solid #333;
+        }
+        .panel {
+            background: #1a1a1a;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .panel h3 {
+            font-size: 0.85rem;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Form elements */
+        select, input {
+            width: 100%;
+            padding: 10px 12px;
+            background: #222;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #fff;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+        select:focus, input:focus { border-color: #00d4ff; outline: none; }
+
+        /* Event list */
+        .event-item {
+            padding: 12px;
+            background: #222;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .event-item:hover { background: #2a2a2a; transform: translateX(3px); }
+        .event-item.threatened { border-left-color: #ff6b6b; }
+        .event-item .species { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .event-item .species-icon { font-size: 1.1rem; }
+        .event-item .location { font-size: 0.8rem; color: #666; margin-top: 5px; }
+        .event-item .confidence { font-size: 0.75rem; color: #00d4ff; }
+        .event-item .threatened-badge {
+            font-size: 0.65rem;
+            background: #ff6b6b;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: auto;
+        }
+
+        /* Chart */
+        .chart-container { height: 200px; }
+
+        /* Legend */
+        .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.75rem;
+            color: #888;
+        }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        /* Map markers */
+        .threatened-marker {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+        }
+        .empty-state .icon { font-size: 2rem; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            <span class="icon">👁️</span>
+            RoadEye
+            <span class="region">— Tasmania</span>
+        </h1>
+        <div class="stats">
+            <div class="stat-box">
+                <div class="number">{{ stats.total }}</div>
+                <div class="label">Total Events</div>
+            </div>
+            <div class="stat-box">
+                <div class="number">{{ stats.today }}</div>
+                <div class="label">Today</div>
+            </div>
+            <div class="stat-box alert">
+                <div class="number">{{ stats.threatened }}</div>
+                <div class="label">Threatened</div>
+            </div>
+            <div class="stat-box">
+                <div class="number">{{ stats.vehicles }}</div>
+                <div class="label">Vehicles</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="map"></div>
+        <div class="sidebar">
+            <div class="panel">
+                <h3>Filters</h3>
+                <select id="time-filter" onchange="applyFilters()">
+                    <option value="24h" {% if filters.time == '24h' %}selected{% endif %}>Last 24 Hours</option>
+                    <option value="7d" {% if filters.time == '7d' %}selected{% endif %}>Last 7 Days</option>
+                    <option value="30d" {% if filters.time == '30d' %}selected{% endif %}>Last 30 Days</option>
+                    <option value="all" {% if filters.time == 'all' %}selected{% endif %}>All Time</option>
+                </select>
+                <select id="species-filter" onchange="applyFilters()">
+                    <option value="all" {% if filters.species == 'all' %}selected{% endif %}>All Species</option>
+                    <option value="threatened" {% if filters.species == 'threatened' %}selected{% endif %}>⚠️ Threatened Only</option>
+                    {% for species in species_list %}
+                    <option value="{{ species.code }}" {% if filters.species == species.code %}selected{% endif %}>
+                        {{ species.common_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="panel">
+                <h3>Species Distribution</h3>
+                <div class="chart-container">
+                    <canvas id="speciesChart"></canvas>
+                </div>
+                <div class="legend">
+                    {% for species, data in species_colours.items() %}
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: {{ data.colour }};"></div>
+                        {{ species }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Recent Events</h3>
+                <div id="recent-events">
+                    {% if events %}
+                        {% for event in events[:15] %}
+                        <div class="event-item {% if event.is_threatened %}threatened{% endif %}"
+                             onclick="focusEvent({{ event.latitude }}, {{ event.longitude }})">
+                            <div class="species">
+                                <span class="species-icon">{{ species_colours.get(event.species_code, {}).get('icon', '🐾') }}</span>
+                                {{ event.species_common or event.species_code }}
+                                {% if event.is_threatened %}
+                                <span class="threatened-badge">THREATENED</span>
+                                {% endif %}
+                            </div>
+                            <div class="location">{{ "%.4f"|format(event.latitude) }}, {{ "%.4f"|format(event.longitude) }}</div>
+                            <div class="confidence">Confidence: {{ "%.0f"|format(event.confidence * 100) }}%</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <div class="icon">📍</div>
+                            <p>No events found</p>
+                            <p style="font-size: 0.8rem; margin-top: 5px;">Try adjusting your filters</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tasmania center coordinates
+        const map = L.map('map').setView([-42.0, 146.5], 7);
+
+        // Dark map tiles
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Species colours from server
+        const speciesColours = {{ species_colours | tojson }};
+
+        // Events data from server
+        const events = {{ events_json | tojson }};
+
+        // Add markers
+        events.forEach(e => {
+            const colour = speciesColours[e.species_code]?.colour || '#868e96';
+            const isThreatened = e.is_threatened;
+
+            const marker = L.circleMarker([e.latitude, e.longitude], {
+                radius: isThreatened ? 10 : 8,
+                fillColor: colour,
+                color: isThreatened ? '#ff6b6b' : '#fff',
+                weight: isThreatened ? 2 : 1,
+                fillOpacity: 0.8,
+                className: isThreatened ? 'threatened-marker' : ''
+            });
+
+            marker.bindPopup(`
+                <div style="min-width: 150px;">
+                    <strong>${e.species_common || e.species_code}</strong>
+                    ${isThreatened ? '<span style="color: #ff6b6b; font-size: 0.8rem;"> ⚠️ Threatened</span>' : ''}
+                    <br>
+                    <span style="color: #666;">Confidence: ${(e.confidence * 100).toFixed(0)}%</span>
+                    <br>
+                    <span style="color: #888; font-size: 0.8rem;">${e.timestamp}</span>
+                </div>
+            `);
+
+            marker.addTo(map);
+        });
+
+        // Focus on event
+        function focusEvent(lat, lng) {
+            map.setView([lat, lng], 14);
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const time = document.getElementById('time-filter').value;
+            const species = document.getElementById('species-filter').value;
+            window.location.href = `/?time=${time}&species=${species}`;
+        }
+
+        // Species distribution chart
+        const speciesCounts = {{ species_counts | tojson }};
+        const chartLabels = Object.keys(speciesCounts);
+        const chartData = Object.values(speciesCounts);
+        const chartColours = chartLabels.map(s => speciesColours[s]?.colour || '#868e96');
+
+        new Chart(document.getElementById('speciesChart'), {
+            type: 'doughnut',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    data: chartData,
+                    backgroundColor: chartColours
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
