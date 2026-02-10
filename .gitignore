@@ -96,6 +96,19 @@ queue/
 *.log
 logs/
 
+# Training data and datasets (large image files)
+data/
+dataset_*/
+auto_labels/
+*.jpg
+*.jpeg
+*.png
+*.webp
+
+# YOLO training outputs
+runs/
+roadeye-wildlife-yolo11/
+
 # OS
 .DS_Store
 Thumbs.db
